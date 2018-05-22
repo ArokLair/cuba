@@ -24,6 +24,9 @@ import com.haulmont.cuba.gui.components.GroupTable;
 import com.haulmont.cuba.gui.components.Table;
 import com.haulmont.cuba.gui.components.data.GroupTableSource;
 import com.haulmont.cuba.gui.components.data.TableSource;
+import com.haulmont.cuba.gui.components.data.table.GroupDatasourceTableAdapter;
+import com.haulmont.cuba.gui.data.CollectionDatasource;
+import com.haulmont.cuba.gui.data.GroupDatasource;
 import com.haulmont.cuba.gui.data.GroupInfo;
 import com.haulmont.cuba.web.gui.components.table.GroupTableDataContainer;
 import com.haulmont.cuba.web.gui.components.table.TableDataContainer;
@@ -68,6 +71,20 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
         super.setTableSource(tableSource);
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public void setDatasource(CollectionDatasource datasource) {
+        if (datasource == null) {
+            setTableSource(null);
+        } else {
+            if (!(datasource instanceof GroupDatasource)) {
+                throw new IllegalArgumentException("GroupTable supports only GroupDatasource");
+            }
+
+            setTableSource(new GroupDatasourceTableAdapter((GroupDatasource) datasource));
+        }
+    }
+
     @Override
     protected TableDataContainer<E> createTableDataContainer(TableSource<E> tableSource) {
         return new GroupTableDataContainer<>((GroupTableSource<E>) tableSource, this);
@@ -103,7 +120,9 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
         groupPropertiesElement = element.addElement("groupProperties");
 
         for (Object groupProperty : component.getGroupProperties()) {
-            if (getNotCollapsedColumns().contains(getColumn(groupProperty.toString()))) {
+            Column<E> column = getColumn(groupProperty.toString());
+
+            if (getNotCollapsedColumns().contains(column)) {
                 Element groupPropertyElement = groupPropertiesElement.addElement("property");
                 groupPropertyElement.addAttribute("id", groupProperty.toString());
             }
@@ -416,8 +435,8 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
                 Object itemId = children.iterator().next();
                 Instance item = ((ItemWrapper) component.getItem(itemId)).getItem(); // vaadin8 get rid of ItemWrapper
                 Object captionValue = item.getValueEx(captionProperty);
-                // vaadin8 use metadataTools format
-                return captionValue != null ? String.valueOf(captionValue) : null;
+                // vaadin8 use metadataTools format with metaproperty
+                return metadataTools.format(captionValue);
             }
         }
 

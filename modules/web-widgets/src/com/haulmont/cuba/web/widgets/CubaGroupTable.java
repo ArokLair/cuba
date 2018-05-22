@@ -72,7 +72,7 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
 
     @Override
     public void setContainerDataSource(Container newDataSource) {
-        if (newDataSource == null) {
+        if (newDataSource == null || newDataSource instanceof IndexedContainer) { // if it is just created
             newDataSource = new NullGroupTableContainer(new IndexedContainer());
         } else if (!(newDataSource instanceof GroupTableContainer)) {
             throw new IllegalArgumentException("CubaGroupTable supports only GroupTableContainer");

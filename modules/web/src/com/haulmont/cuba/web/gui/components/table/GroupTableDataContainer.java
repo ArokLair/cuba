@@ -16,18 +16,21 @@
 
 package com.haulmont.cuba.web.gui.components.table;
 
+import com.haulmont.cuba.gui.components.data.BindingState;
 import com.haulmont.cuba.gui.components.data.GroupTableSource;
+import com.haulmont.cuba.gui.data.GroupDatasource;
 import com.haulmont.cuba.gui.data.GroupInfo;
 import com.haulmont.cuba.web.widgets.data.GroupTableContainer;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class GroupTableDataContainer<I> extends SortableDataContainer<I> implements GroupTableContainer {
 
     protected Set<GroupInfo> expandedGroups = new HashSet<>();
+
+    protected List<Object> cachedItemIds;
+    protected Object first;
+    protected Object last;
 
     public GroupTableDataContainer(GroupTableSource<I> tableSource,
                                    TableSourceEventsDelegate<I> dataEventsDelegate) {
@@ -40,7 +43,31 @@ public class GroupTableDataContainer<I> extends SortableDataContainer<I> impleme
 
     @Override
     public void groupBy(Object[] properties) {
-        getGroupTableSource().groupBy(properties);
+        doGroup(properties);
+    }
+
+    protected Set<GroupInfo> saveState() {
+        //save expanding state
+        return new HashSet<>(expandedGroups);
+    }
+
+    protected void restoreState(Set<GroupInfo> expandState) {
+        collapseAll();
+        //restore groups expanding
+        if (hasGroups()) {
+            for (GroupInfo groupInfo : expandState) {
+                expand(groupInfo);
+            }
+        }
+    }
+
+    protected void doGroup(Object[] properties) {
+        Set<GroupInfo> expandState = saveState();
+        ((GroupDatasource) tableSource).groupBy(properties);
+        restoreState(expandState);
+        resetCachedItems();
+
+        // todo aggregation
     }
 
     @Override
@@ -113,26 +140,105 @@ public class GroupTableDataContainer<I> extends SortableDataContainer<I> impleme
 
     @Override
     public void expandAll() {
-        // todo
+        if (hasGroups()) {
+            expandedGroups.clear();
+
+            expand(rootGroups());
+            resetCachedItems();
+        }
+    }
+
+    protected void expand(Collection groupIds) {
+        for (Object groupId : groupIds) {
+            expandedGroups.add((GroupInfo) groupId);
+            if (hasChildren(groupId)) {
+                expand(getChildren(groupId));
+            }
+        }
     }
 
     @Override
     public void expand(Object id) {
-        // todo
+        if (isGroup(id)) {
+            expandedGroups.add((GroupInfo) id);
+            resetCachedItems();
+        }
     }
 
     @Override
     public void collapseAll() {
-        // todo
+        if (hasGroups()) {
+            expandedGroups.clear();
+            resetCachedItems();
+        }
     }
 
     @Override
     public void collapse(Object id) {
-        // todo
+        if (isGroup(id)) {
+            //noinspection RedundantCast
+            expandedGroups.remove((GroupInfo) id);
+            resetCachedItems();
+        }
     }
 
     @Override
     public boolean isExpanded(Object id) {
-        return false;
+        //noinspection RedundantCast
+        return isGroup(id) && expandedGroups.contains((GroupInfo) id);
+    }
+
+    @Override
+    public Collection<?> getItemIds() {
+        if (tableSource.getState() == BindingState.INACTIVE) {
+            return Collections.emptyList();
+        }
+
+        if (cachedItemIds == null) {
+            List<Object> result = new ArrayList<>();
+            //noinspection unchecked
+            List<GroupInfo> roots = getGroupTableSource().rootGroups();
+            for (GroupInfo root : roots) {
+                result.add(root);
+                collectItemIds(root, result);
+            }
+            cachedItemIds = result;
+
+            if (!cachedItemIds.isEmpty()) {
+                first = cachedItemIds.get(0);
+                last = cachedItemIds.get(cachedItemIds.size() - 1);
+            }
+        }
+        return cachedItemIds;
+    }
+
+    protected void collectItemIds(GroupInfo groupId, List<Object> itemIds) {
+        if (expandedGroups.contains(groupId)) {
+            GroupTableSource<I> groupTableSource = getGroupTableSource();
+
+            if (groupTableSource.hasChildren(groupId)) {
+                List<GroupInfo> children = groupTableSource.getChildren(groupId);
+                for (GroupInfo child : children) {
+                    itemIds.add(child);
+                    collectItemIds(child, itemIds);
+                }
+            } else {
+                itemIds.addAll(groupTableSource.getGroupItemIds(groupId));
+            }
+        }
+    }
+
+    protected void resetCachedItems() {
+        cachedItemIds = null;
+        first = null;
+        last = null;
+    }
+
+    @Override
+    public int size() {
+        if (hasGroups()) {
+            return getItemIds().size();
+        }
+        return super.size();
     }
 }

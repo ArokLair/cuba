@@ -1366,13 +1366,17 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
     @SuppressWarnings("unchecked")
     @Override
     public void setDatasource(CollectionDatasource datasource) {
-        TableSource<E> tableSource;
-        if (datasource instanceof CollectionDatasource.Sortable) {
-            tableSource = new SortableCollectionDatasourceTableAdapter((CollectionDatasource.Sortable) datasource);
+        if (datasource == null) {
+            setTableSource(null);
         } else {
-            tableSource = new CollectionDatasourceTableAdapter(datasource);
+            TableSource<E> tableSource;
+            if (datasource instanceof CollectionDatasource.Sortable) {
+                tableSource = new SortableCollectionDatasourceTableAdapter((CollectionDatasource.Sortable) datasource);
+            } else {
+                tableSource = new CollectionDatasourceTableAdapter(datasource);
+            }
+            setTableSource(tableSource);
         }
-        setTableSource(tableSource);
     }
 
     protected boolean canBeSorted(@Nullable TableSource<E> tableSource) {

@@ -30,8 +30,9 @@ public class GroupDatasourceTableAdapter<E extends Entity<K>, K>
         extends SortableCollectionDatasourceTableAdapter<E, K>
         implements GroupTableSource<E> {
 
-    public GroupDatasourceTableAdapter(CollectionDatasource.Sortable<E, K> datasource) {
-        super(datasource);
+    @SuppressWarnings("unchecked")
+    public GroupDatasourceTableAdapter(GroupDatasource<E, K> datasource) {
+        super((CollectionDatasource.Sortable<E, K>) datasource);
     }
 
     @SuppressWarnings("unchecked")
