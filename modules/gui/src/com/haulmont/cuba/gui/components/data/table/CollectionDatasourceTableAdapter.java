@@ -170,7 +170,7 @@ public class CollectionDatasourceTableAdapter<E extends Entity<K>, K> implements
     }
 
     @Override
-    public MetaClass getMetaClass() {
+    public MetaClass getEntityMetaClass() {
         return datasource.getMetaClass();
     }
 

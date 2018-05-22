@@ -58,7 +58,7 @@ public class ContainerValueSource<E extends Entity, V> extends EventPublisher im
     }
 
     @Override
-    public MetaClass getMetaClass() {
+    public MetaClass getEntityMetaClass() {
         return container.getMetaClass();
     }
 

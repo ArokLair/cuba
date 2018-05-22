@@ -593,7 +593,7 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
 
     protected void enableEditableColumns(EntityTableSource<E> entityTableSource,
                                          Collection<MetaPropertyPath> propertyIds) {
-        MetaClass metaClass = entityTableSource.getMetaClass();
+        MetaClass metaClass = entityTableSource.getEntityMetaClass();
 
         List<MetaPropertyPath> editableColumns = new ArrayList<>(propertyIds.size());
         for (MetaPropertyPath propertyId : propertyIds) {
@@ -1234,14 +1234,14 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
                 .filter(c -> {
                     MetaPropertyPath propertyPath = c.getBoundProperty();
                     return propertyPath != null
-                            && security.isEntityAttrReadPermitted(entityTableSource.getMetaClass(), propertyPath.toPathString());
+                            && security.isEntityAttrReadPermitted(entityTableSource.getEntityMetaClass(), propertyPath.toPathString());
                 })
                 .map(Column::getBoundProperty)
                 .collect(Collectors.toList());
     }
 
     protected void setupColumnSettings(EntityTableSource<E> entityTableSource) {
-        MetaClass metaClass = entityTableSource.getMetaClass();
+        MetaClass metaClass = entityTableSource.getEntityMetaClass();
 
         List<MetaPropertyPath> editableColumns = Collections.emptyList();
 
@@ -1461,7 +1461,7 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
     protected List<Object> getInitialVisibleColumnIds(EntityTableSource<E> entityTableSource) {
         List<Object> result = new ArrayList<>();
 
-        MetaClass metaClass = entityTableSource.getMetaClass();
+        MetaClass metaClass = entityTableSource.getEntityMetaClass();
         for (Column column : columnsOrder) {
             if (column.getId() instanceof MetaPropertyPath) {
                 MetaPropertyPath propertyPath = (MetaPropertyPath) column.getId();
@@ -1707,7 +1707,7 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
                 @SuppressWarnings("unchecked")
                 EntityTableSource<E> entityTableSource = (EntityTableSource) getTableSource();
 
-                MetaPropertyPath sortProperty = entityTableSource.getMetaClass().getPropertyPath(sortProp);
+                MetaPropertyPath sortProperty = entityTableSource.getEntityMetaClass().getPropertyPath(sortProp);
                 if (newColumns.contains(sortProperty)) {
                     boolean sortAscending = Boolean.parseBoolean(columnsElem.attributeValue("sortAscending"));
 
@@ -1858,7 +1858,7 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
         EntityTableSource<E> entityTableSource = (EntityTableSource<E>) getTableSource();
 
         MetaPropertyPath targetCol = entityTableSource != null ?
-                entityTableSource.getMetaClass().getPropertyPath(columnId) : null;
+                entityTableSource.getEntityMetaClass().getPropertyPath(columnId) : null;
 
         Object generatedColumnId = targetCol != null ? targetCol : columnId;
 
@@ -1954,7 +1954,7 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
         EntityTableSource<E> entityTableSource = (EntityTableSource<E>) getTableSource();
 
         MetaPropertyPath targetCol = entityTableSource != null ?
-                entityTableSource.getMetaClass().getPropertyPath(columnId) : null;
+                entityTableSource.getEntityMetaClass().getPropertyPath(columnId) : null;
         removeGeneratedColumnInternal(targetCol == null ? columnId : targetCol);
     }
 
@@ -2467,7 +2467,7 @@ public abstract class WebAbstractTable<T extends com.vaadin.v7.ui.Table & CubaEn
                 EntityTableSource<E> entityTableSource = (EntityTableSource<E>) getTableSource();
 
                 propertyPath = entityTableSource != null ?
-                        entityTableSource.getMetaClass().getPropertyPath(propertyId.toString()) : null;
+                        entityTableSource.getEntityMetaClass().getPropertyPath(propertyId.toString()) : null;
             }
 
             if (propertyPath != null) {
