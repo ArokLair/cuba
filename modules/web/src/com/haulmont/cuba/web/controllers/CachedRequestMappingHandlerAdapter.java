@@ -16,16 +16,17 @@
  */
 package com.haulmont.cuba.web.controllers;
 
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.LastModified;
-import org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 
 import javax.servlet.http.HttpServletRequest;
 
 public class CachedAnnotationMethodHandlerAdapter extends AnnotationMethodHandlerAdapter {
     @Override
-    public long getLastModified(HttpServletRequest request, Object handler) {
-        if (handler instanceof LastModified) {
-            return ((LastModified) handler).getLastModified(request);
+    public long getLastModifiedInternal(HttpServletRequest request, HandlerMethod handlerMethod) {
+        if (handlerMethod.getBean() instanceof LastModified) {
+            return ((LastModified) handlerMethod.getBean()).getLastModified(request);
         }
         return -1L;
     }

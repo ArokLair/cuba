@@ -17,6 +17,7 @@
 package com.haulmont.cuba.core.config;
 
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
@@ -42,10 +43,18 @@ public class ConfigDefaultMethod extends ConfigMethod {
             if (!lookupConstructor.isAccessible()) {
                 lookupConstructor.setAccessible(true);
             }
-            return lookupConstructor.newInstance(configInterface, MethodHandles.Lookup.PRIVATE)
-                    .unreflectSpecial(configMethod, configInterface)
+            //TODO: CUBA 7 Config default methods should work for JAVA 8 and 10
+            //TODO: https://github.com/cuba-platform/cuba/issues/895
+            return MethodHandles.lookup()
+                    .findSpecial(configInterface, configMethod.getName(), MethodType.methodType(configMethod.getReturnType(),
+                            configMethod.getParameterTypes()), configInterface)
                     .bindTo(proxy)
                     .invokeWithArguments(args);
+
+//            return lookupConstructor.newInstance(configInterface, MethodHandles.Lookup.PRIVATE)
+//                    .unreflectSpecial(configMethod, configInterface)
+//                    .bindTo(proxy)
+//                    .invokeWithArguments(args);
         } catch (Throwable throwable) {
             throw new RuntimeException("Error invoking default method of config interface", throwable);
         }
