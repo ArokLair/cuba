@@ -22,7 +22,10 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import javax.servlet.http.HttpServletRequest;
 
-public class CachedAnnotationMethodHandlerAdapter extends AnnotationMethodHandlerAdapter {
+//TODO: CUBA 7
+//Remove CachedAnnotationMethodHandlerAdapter and StaticContentController from platform
+//https://github.com/cuba-platform/cuba/issues/894
+public class CachedRequestMappingHandlerAdapter extends RequestMappingHandlerAdapter {
     @Override
     public long getLastModifiedInternal(HttpServletRequest request, HandlerMethod handlerMethod) {
         if (handlerMethod.getBean() instanceof LastModified) {
