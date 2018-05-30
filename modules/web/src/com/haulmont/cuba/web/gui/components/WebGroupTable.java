@@ -22,18 +22,15 @@ import com.haulmont.cuba.core.app.dynamicattributes.DynamicAttributesUtils;
 import com.haulmont.cuba.core.entity.Entity;
 import com.haulmont.cuba.gui.components.GroupTable;
 import com.haulmont.cuba.gui.components.Table;
-import com.haulmont.cuba.gui.data.CollectionDatasource;
-import com.haulmont.cuba.gui.data.Datasource;
-import com.haulmont.cuba.gui.data.GroupDatasource;
+import com.haulmont.cuba.gui.components.data.GroupTableSource;
+import com.haulmont.cuba.gui.components.data.TableSource;
 import com.haulmont.cuba.gui.data.GroupInfo;
-import com.haulmont.cuba.gui.data.impl.CollectionDsListenersWrapper;
+import com.haulmont.cuba.web.gui.components.table.GroupTableDataContainer;
+import com.haulmont.cuba.web.gui.components.table.TableDataContainer;
 import com.haulmont.cuba.web.gui.data.ItemWrapper;
-import com.haulmont.cuba.web.gui.data.SortableCollectionDsWrapper;
 import com.haulmont.cuba.web.widgets.CubaGroupTable;
 import com.haulmont.cuba.web.widgets.CubaGroupTable.GroupAggregationContext;
 import com.haulmont.cuba.web.widgets.data.AggregationContainer;
-import com.haulmont.cuba.web.widgets.data.GroupTableContainer;
-import com.vaadin.v7.data.Item;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.dom4j.Element;
@@ -62,20 +59,32 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
     }
 
     @Override
+    public void setTableSource(TableSource<E> tableSource) {
+        if (tableSource != null &&
+                !(tableSource instanceof GroupTableSource)) {
+            throw new IllegalArgumentException("GroupTable supports only GroupTableSource data binding");
+        }
+
+        super.setTableSource(tableSource);
+    }
+
+    @Override
+    protected TableDataContainer<E> createTableDataContainer(TableSource<E> tableSource) {
+        return new GroupTableDataContainer<>((GroupTableSource<E>) tableSource, this);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
     protected void initComponent(CubaGroupTable component) {
         super.initComponent(component);
 
-        // vaadin8 replace with method reference
-        component.setGroupPropertyValueFormatter(new AggregatableGroupPropertyValueFormatter());
+        component.setGroupPropertyValueFormatter((groupId, value) ->
+                formatAggregatableGroupPropertyValue((GroupInfo<MetaPropertyPath>) groupId, value)
+        );
     }
 
     protected CubaGroupTable createComponent() {
         return new CubaGroupTableExt();
-    }
-
-    @Override
-    public GroupDatasource getDatasource() {
-        return (GroupDatasource) super.getDatasource();
     }
 
     @Override
@@ -93,13 +102,12 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
 
         groupPropertiesElement = element.addElement("groupProperties");
 
-        /* vaadin8 disabled temporarily
         for (Object groupProperty : component.getGroupProperties()) {
             if (getNotCollapsedColumns().contains(getColumn(groupProperty.toString()))) {
                 Element groupPropertyElement = groupPropertiesElement.addElement("property");
                 groupPropertyElement.addAttribute("id", groupProperty.toString());
             }
-        }*/
+        }
 
         return true;
     }
@@ -366,485 +374,54 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
         return component.aggregate(new GroupAggregationContext(component, info));
     }
 
-    protected class GroupTableDsWrapper extends SortableCollectionDsWrapper
-            implements GroupTableContainer, AggregationContainer {
+    protected String formatAggregatableGroupPropertyValue(GroupInfo<MetaPropertyPath> groupId, @Nullable Object value) {
+        String formattedValue = formatGroupPropertyValue(groupId, value);
 
-        protected boolean groupDatasource;
-        protected List<Object> aggregationProperties = null;
-
-        //Supports items expanding
-        protected Set<GroupInfo> expanded = new HashSet<>();
-
-        protected Set<GroupInfo> expandState = new HashSet<>();
-
-        //Items cache
-        protected LinkedList<Object> cachedItemIds;
-        protected Object first;
-        protected Object last;
-
-        public GroupTableDsWrapper(CollectionDatasource datasource, Collection<MetaPropertyPath> properties,
-                                   CollectionDsListenersWrapper collectionDsListenersWrapper) {
-            super(datasource, properties, true, collectionDsListenersWrapper);
-            groupDatasource = datasource instanceof GroupDatasource;
-        }
-
-        @Override
-        public void groupBy(Object[] properties) {
-            if (groupDatasource) {
-                doGroup(properties);
-            }
-        }
-
-        protected void doGroup(Object[] properties) {
-            saveState();
-            ((GroupDatasource) datasource).groupBy(properties);
-            restoreState();
-            resetCachedItems();
-
-            if (aggregationCells != null) {
-                if (hasGroups()) {
-                    if (groupAggregationCells == null) {
-                        groupAggregationCells = new HashMap<>();
-                    } else {
-                        groupAggregationCells.clear();
-                    }
-                    fillGroupAggregationCells(groupAggregationCells);
-                } else {
-                    groupAggregationCells = null;
-                }
-            }
-        }
-
-        protected void saveState() {
-            //save expanding state
-            expandState.clear();
-            expandState.addAll(expanded);
-        }
-
-        protected void restoreState() {
-            collapseAll();
-            //restore groups expanding
-            if (hasGroups()) {
-                for (GroupInfo groupInfo : expandState) {
-                    expand(groupInfo);
-                }
-            }
-            expandState.clear();
-        }
-
-        protected void fillGroupAggregationCells(Map<Table.Column, GroupAggregationCells> cells) {
-            Collection roots = rootGroups();
-            for (Object rootGroup : roots) {
-                __fillGroupAggregationCells(rootGroup, cells);
-            }
-        }
-
-        protected void __fillGroupAggregationCells(Object groupId, Map<Table.Column, GroupAggregationCells> cells) {
-            Set<Table.Column> aggregatableColumns = aggregationCells.keySet();
-
-            for (Column column : aggregatableColumns) {
-                if (!columns.get(getGroupProperty(groupId)).equals(column)) {
-                    GroupAggregationCells groupCells = cells.get(column);
-                    if (groupCells == null) {
-                        groupCells = new GroupAggregationCells();
-                        cells.put(column, groupCells);
-                    }
-                    groupCells.addCell(groupId, "");
-                }
-            }
-
-            if (hasChildren(groupId)) {
-                Collection children = getChildren(groupId);
-                for (Object child : children) {
-                    __fillGroupAggregationCells(child, cells);
-                }
-            }
-        }
-
-        @Override
-        public Collection<?> rootGroups() {
-            if (hasGroups()) {
-                return ((GroupDatasource) datasource).rootGroups();
-            }
-            return Collections.emptyList();
-        }
-
-        @Override
-        public boolean hasChildren(Object id) {
-            return isGroup(id) && ((GroupDatasource) datasource).hasChildren((GroupInfo) id);
-        }
-
-        @Override
-        public Collection<?> getChildren(Object id) {
-            if (isGroup(id)) {
-                return ((GroupDatasource) datasource).getChildren((GroupInfo) id);
-            }
-            return Collections.emptyList();
-        }
-
-        @Override
-        public Collection<?> getGroupItemIds(Object id) {
-            if (isGroup(id)) {
-                return ((GroupDatasource) datasource).getGroupItemIds((GroupInfo) id);
-            }
-            return Collections.emptyList();
-        }
-
-        @Override
-        public int getGroupItemsCount(Object id) {
-            if (isGroup(id)) {
-                return ((GroupDatasource) datasource).getGroupItemsCount((GroupInfo) id);
-            }
-            return 0;
-        }
-
-        @Override
-        public boolean isGroup(Object id) {
-            return (id instanceof GroupInfo) && ((GroupDatasource) datasource).containsGroup((GroupInfo) id);
-        }
-
-        @Override
-        public Object getGroupProperty(Object id) {
-            if (isGroup(id)) {
-                return ((GroupDatasource) datasource).getGroupProperty((GroupInfo) id);
-            }
-            return null;
-        }
-
-        @Override
-        public Object getGroupPropertyValue(Object id) {
-            if (isGroup(id)) {
-                return ((GroupDatasource) datasource).getGroupPropertyValue((GroupInfo) id);
-            }
-            return null;
-        }
-
-        @Override
-        public boolean hasGroups() {
-            return groupDatasource && ((GroupDatasource) datasource).hasGroups();
-        }
-
-        @Override
-        public Collection<?> getGroupProperties() {
-            if (hasGroups()) {
-                return ((GroupDatasource) datasource).getGroupProperties();
-            }
-            return Collections.emptyList();
-        }
-
-        @Override
-        public void expandAll() {
-            if (hasGroups()) {
-                this.expanded.clear();
-                expand(rootGroups());
-                resetCachedItems();
-            }
-        }
-
-        protected void expand(Collection groupIds) {
-            for (Object groupId : groupIds) {
-                expanded.add((GroupInfo) groupId);
-                if (hasChildren(groupId)) {
-                    expand(getChildren(groupId));
-                }
-            }
-        }
-
-        @Override
-        public void expand(Object id) {
-            if (isGroup(id)) {
-                expanded.add((GroupInfo) id);
-                resetCachedItems();
-            }
-        }
-
-        @Override
-        public void collapseAll() {
-            if (hasGroups()) {
-                expanded.clear();
-                resetCachedItems();
-            }
-        }
-
-        @Override
-        public void collapse(Object id) {
-            if (isGroup(id)) {
-                //noinspection RedundantCast
-                expanded.remove((GroupInfo) id);
-                resetCachedItems();
-            }
-        }
-
-        @Override
-        public boolean isExpanded(Object id) {
-            //noinspection RedundantCast
-            return isGroup(id) && expanded.contains((GroupInfo) id);
-        }
-
-        @Override
-        public Collection getAggregationPropertyIds() {
-            if (aggregationProperties != null) {
-                return Collections.unmodifiableList(aggregationProperties);
-            }
-            return Collections.emptyList();
-        }
-
-        @Override
-        public Type getContainerPropertyAggregation(Object propertyId) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void addContainerPropertyAggregation(Object propertyId, Type type) {
-            if (aggregationProperties == null) {
-                aggregationProperties = new LinkedList<>();
-            } else if (aggregationProperties.contains(propertyId)) {
-                throw new IllegalStateException("Such aggregation property is already exists");
-            }
-            aggregationProperties.add(propertyId);
-        }
-
-        @Override
-        public void removeContainerPropertyAggregation(Object propertyId) {
-            if (aggregationProperties != null) {
-                aggregationProperties.remove(propertyId);
-                if (aggregationProperties.isEmpty()) {
-                    aggregationProperties = null;
-                }
-            }
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public Map<Object, Object> aggregate(Context context) {
-            return __aggregate(this, context);
-        }
-
-        @Override
-        public Object firstItemId() {
-            if (hasGroups()) {
-                return first;
-            }
-            return super.firstItemId();
-        }
-
-        @Override
-        public Object lastItemId() {
-            if (hasGroups()) {
-                return last;
-            }
-            return super.lastItemId();
-        }
-
-        @Override
-        public Object nextItemId(Object itemId) {
-            if (hasGroups()) {
-                if (itemId == null) {
-                    return null;
-                }
-                if (isLastId(itemId)) {
-                    return null;
-                }
-                int index = getCachedItemIds().indexOf(itemId);
-                return getCachedItemIds().get(index + 1);
-            }
-            return super.nextItemId(itemId);
-        }
-
-        @Override
-        public Object prevItemId(Object itemId) {
-            if (hasGroups()) {
-                if (itemId == null) {
-                    return null;
-                }
-
-                if (isFirstId(itemId)) {
-                    return null;
-                }
-                int index = getCachedItemIds().indexOf(itemId);
-                return getCachedItemIds().get(index - 1);
-            }
-            return super.prevItemId(itemId);
-        }
-
-        @Override
-        public boolean isFirstId(Object itemId) {
-            if (hasGroups()) {
-                return itemId != null && itemId.equals(first);
-            }
-            return super.isFirstId(itemId);
-        }
-
-        @Override
-        public boolean isLastId(Object itemId) {
-            if (hasGroups()) {
-                return itemId != null && itemId.equals(last);
-            }
-            return super.isLastId(itemId);
-        }
-
-        @Override
-        public Object addItemAfter(Object previousItemId) throws UnsupportedOperationException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Item addItemAfter(Object previousItemId, Object newItemId) throws UnsupportedOperationException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Collection getItemIds() {
-            if (hasGroups()) {
-                return getCachedItemIds();
-            } else {
-                return super.getItemIds();
-            }
-        }
-
-        @Override
-        public void sort(Object[] propertyId, boolean[] ascending) {
-            resetCachedItems();
-            super.sort(propertyId, ascending);
-        }
-
-        protected LinkedList getCachedItemIds() {
-            if (cachedItemIds == null) {
-                LinkedList<Object> result = new LinkedList<>();
-                //noinspection unchecked
-                List<GroupInfo> roots = ((GroupDatasource) datasource).rootGroups();
-                for (GroupInfo root : roots) {
-                    result.add(root);
-                    collectItemIds(root, result);
-                }
-                cachedItemIds = result;
-
-                if (!cachedItemIds.isEmpty()) {
-                    first = cachedItemIds.peekFirst();
-                    last = cachedItemIds.peekLast();
-                }
-            }
-            return cachedItemIds;
-        }
-
-        protected void collectItemIds(GroupInfo groupId, List<Object> itemIds) {
-            if (expanded.contains(groupId)) {
-                if (((GroupDatasource) datasource).hasChildren(groupId)) {
-                    @SuppressWarnings("unchecked")
-                    List<GroupInfo> children = ((GroupDatasource) datasource).getChildren(groupId);
-                    for (GroupInfo child : children) {
-                        itemIds.add(child);
-                        collectItemIds(child, itemIds);
-                    }
-                } else {
-                    itemIds.addAll(((GroupDatasource) datasource).getGroupItemIds(groupId));
-                }
-            }
-        }
-
-        protected void resetCachedItems() {
-            cachedItemIds = null;
-            first = null;
-            last = null;
-        }
-
-        @Override
-        public int size() {
-            if (hasGroups()) {
-                return getItemIds().size();
-            }
-            return super.size();
-        }
-
-        @Override
-        protected Datasource.StateChangeListener createStateChangeListener() {
-            return new ContainerDatasourceStateChangeListener() {
-                @Override
-                public void stateChanged(Datasource.StateChangeEvent e) {
-                    rerender = false;
-                    Collection groupProperties = component.getGroupProperties();
-                    component.groupBy(groupProperties.toArray());
-                    super.stateChanged(e);
-                    rerender = true;
-                }
-            };
-        }
-
-        @Override
-        protected CollectionDatasource.CollectionChangeListener createCollectionChangeListener() {
-            return new ContainerDatasourceCollectionChangeListener(){
-                @Override
-                public void collectionChanged(CollectionDatasource.CollectionChangeEvent e) {
-                    Collection groupProperties = component.getGroupProperties();
-                    component.groupBy(groupProperties.toArray());
-                    super.collectionChanged(e);
-                }
-            };
-        }
-
-        @Override
-        public void resetSortOrder() {
-            if (datasource instanceof CollectionDatasource.Sortable) {
-                ((CollectionDatasource.Sortable) datasource).resetSortOrder();
-            }
-        }
-    }
-
-    protected class AggregatableGroupPropertyValueFormatter extends DefaultGroupPropertyValueFormatter {
-        @Override
-        public String format(Object groupId, @Nullable Object value) {
-            String formattedValue = super.format(groupId, value);
-
-            if (groupCellValueFormatter != null) {
-                List<Entity> groupItems = component.getGroupItemIds(groupId).stream()
+        if (groupCellValueFormatter != null) {
+            List<Entity> groupItems = component.getGroupItemIds(groupId).stream()
                     .map(itemId -> ((ItemWrapper) component.getItem(itemId)).getItem()) // vaadin8 get rid of ItemWrapper
                     .collect(Collectors.toList());
 
-                @SuppressWarnings("unchecked")
-                GroupCellContext<E> context = new GroupCellContext<>((GroupInfo) groupId, value,
-                        formattedValue, (List<E>) groupItems);
-                return groupCellValueFormatter.format(context);
-            }
+            @SuppressWarnings("unchecked")
+            GroupCellContext<E> context = new GroupCellContext<>(groupId, value, formattedValue, (List<E>) groupItems);
+            return groupCellValueFormatter.format(context);
+        }
 
-            if (showItemsCountForGroup) {
-                int count = WebGroupTable.this.component.getGroupItemsCount(groupId);
-                return String.format("%s (%d)", formattedValue == null ? "" : formattedValue, count);
-            } else {
-                return formattedValue == null ? "" : formattedValue;
-            }
+        if (showItemsCountForGroup) {
+            int count = this.component.getGroupItemsCount(groupId);
+            return String.format("%s (%d)", formattedValue == null ? "" : formattedValue, count);
+        } else {
+            return formattedValue == null ? "" : formattedValue;
         }
     }
 
-    protected class DefaultGroupPropertyValueFormatter implements CubaGroupTable.GroupPropertyValueFormatter {
-        @SuppressWarnings("unchecked")
-        @Override
-        public String format(Object groupId, @Nullable Object value) {
-            if (value == null) {
-                return "";
-            }
-
-            MetaPropertyPath propertyPath = ((GroupInfo<MetaPropertyPath>) groupId).getProperty();
-            Table.Column column = columns.get(propertyPath);
-            if (column != null && column.getXmlDescriptor() != null) {
-                String captionProperty = column.getXmlDescriptor().attributeValue("captionProperty"); // vaadin8 move to Column
-                if (column.getFormatter() != null) {
-                    return column.getFormatter().format(value);
-                } else if (StringUtils.isNotEmpty(captionProperty)) {
-                    Collection<?> children = component.getGroupItemIds(groupId);
-                    if (children.isEmpty()) {
-                        return null;
-                    }
-
-                    Object itemId = children.iterator().next();
-                    Instance item = ((ItemWrapper) component.getItem(itemId)).getItem();
-                    Object captionValue = item.getValueEx(captionProperty);
-                    // vaadin8 use metadataTools format
-                    return captionValue != null ? String.valueOf(captionValue) : null;
-                }
-            }
-
-            return metadataTools.format(value, propertyPath.getMetaProperty());
+    @SuppressWarnings("unchecked")
+    protected String formatGroupPropertyValue(GroupInfo<MetaPropertyPath> groupId, @Nullable Object value) {
+        if (value == null) {
+            return "";
         }
+
+        MetaPropertyPath propertyPath = groupId.getProperty();
+        Table.Column column = columns.get(propertyPath);
+        if (column != null && column.getXmlDescriptor() != null) {
+            String captionProperty = column.getXmlDescriptor().attributeValue("captionProperty"); // vaadin8 move to Column
+            if (column.getFormatter() != null) {
+                return column.getFormatter().format(value);
+            } else if (StringUtils.isNotEmpty(captionProperty)) {
+                Collection<?> children = component.getGroupItemIds(groupId);
+                if (children.isEmpty()) {
+                    return null;
+                }
+
+                Object itemId = children.iterator().next();
+                Instance item = ((ItemWrapper) component.getItem(itemId)).getItem(); // vaadin8 get rid of ItemWrapper
+                Object captionValue = item.getValueEx(captionProperty);
+                // vaadin8 use metadataTools format
+                return captionValue != null ? String.valueOf(captionValue) : null;
+            }
+        }
+
+        return metadataTools.format(value, propertyPath.getMetaProperty());
     }
 
     protected static class GroupAggregationCells {

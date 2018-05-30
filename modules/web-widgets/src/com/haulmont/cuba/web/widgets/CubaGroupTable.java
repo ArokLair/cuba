@@ -18,7 +18,7 @@ package com.haulmont.cuba.web.widgets;
 
 import com.haulmont.cuba.web.widgets.data.AggregationContainer;
 import com.haulmont.cuba.web.widgets.data.GroupTableContainer;
-import com.haulmont.cuba.web.widgets.data.util.GroupTableContainerWrapper;
+import com.haulmont.cuba.web.widgets.data.util.NullGroupTableContainer;
 import com.vaadin.server.KeyMapper;
 import com.vaadin.server.PaintException;
 import com.vaadin.server.PaintTarget;
@@ -73,10 +73,12 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
     @Override
     public void setContainerDataSource(Container newDataSource) {
         if (newDataSource == null) {
-            newDataSource = new IndexedContainer();
+            newDataSource = new NullGroupTableContainer(new IndexedContainer());
+        } else if (!(newDataSource instanceof GroupTableContainer)) {
+            throw new IllegalArgumentException("CubaGroupTable supports only GroupTableContainer");
         }
 
-        super.setContainerDataSource(new GroupTableContainerWrapper((GroupTableContainer) newDataSource));
+        super.setContainerDataSource(newDataSource);
     }
 
     @Override

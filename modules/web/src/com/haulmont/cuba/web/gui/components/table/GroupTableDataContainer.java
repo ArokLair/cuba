@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-// todo WORK HERE
 public class GroupTableDataContainer<I> extends SortableDataContainer<I> implements GroupTableContainer {
 
     protected Set<GroupInfo> expandedGroups = new HashSet<>();
@@ -114,22 +113,22 @@ public class GroupTableDataContainer<I> extends SortableDataContainer<I> impleme
 
     @Override
     public void expandAll() {
-
+        // todo
     }
 
     @Override
     public void expand(Object id) {
-
+        // todo
     }
 
     @Override
     public void collapseAll() {
-
+        // todo
     }
 
     @Override
     public void collapse(Object id) {
-
+        // todo
     }
 
     @Override
