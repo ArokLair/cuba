@@ -65,7 +65,7 @@ public class InstanceContainerImpl<T extends Entity> implements InstanceContaine
     }
 
     @Override
-    public void setItem(T item) {
+    public void setItem(@Nullable T item) {
         T prevItem = this.item;
 
         if (this.item != null) {
