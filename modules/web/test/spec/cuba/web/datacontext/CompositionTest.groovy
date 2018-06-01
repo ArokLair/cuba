@@ -43,14 +43,16 @@ class CompositionTest extends WebSpec {
     class OrderScreen {
         DataContext dataContext
         InstanceContainer<Order> orderCnt
-        CollectionContainer<OrderLine> orderLinesCnt
+        CollectionContainer<OrderLine> linesCnt
 
         def open(Order order) {
+            mockLoad(order)
+
             dataContext = dataContextFactory.createDataContext()
             orderCnt = dataContextFactory.createInstanceContainer(Order)
-            orderLinesCnt = dataContextFactory.createCollectionContainer(OrderLine)
+            linesCnt = dataContextFactory.createCollectionContainer(OrderLine)
             orderCnt.addItemChangeListener { e ->
-                orderLinesCnt.setItems(e.item.orderLines)
+                linesCnt.setItems(e.item.orderLines)
             }
 
             InstanceLoader orderLdr = dataContextFactory.createInstanceLoader()
@@ -59,36 +61,34 @@ class CompositionTest extends WebSpec {
 
             orderLdr.entityId = order.id
             orderLdr.load()
-        }
 
-        def commit() {
-            dataContext.commit()
+            TestServiceProxy.clear()
         }
     }
 
-    class OrderLineScreen {
+    class LineScreen {
         DataContext dataContext
-        InstanceContainer<OrderLine> orderLineCnt
+        InstanceContainer<OrderLine> lineCnt
 
         def open(OrderLine orderLine, DataContext parentContext) {
+            mockLoad(orderLine)
+
             dataContext = dataContextFactory.createDataContext()
             if (parentContext != null)
                 dataContext.setParent(parentContext)
-            orderLineCnt = dataContextFactory.createInstanceContainer(OrderLine)
+            lineCnt = dataContextFactory.createInstanceContainer(OrderLine)
 
             if (!dataContext.contains(orderLine)) {
                 InstanceLoader loader = dataContextFactory.createInstanceLoader()
-                loader.setContainer(orderLineCnt)
+                loader.setContainer(lineCnt)
                 loader.setDataContext(dataContext)
                 loader.setEntityId(orderLine.id)
                 loader.load()
             } else {
-                orderLineCnt.item = dataContext.find(OrderLine, orderLine.id)
+                lineCnt.item = dataContext.find(OrderLine, orderLine.id)
             }
-        }
 
-        def commit() {
-            dataContext.commit()
+            TestServiceProxy.clear()
         }
     }
 
@@ -97,6 +97,8 @@ class CompositionTest extends WebSpec {
         InstanceContainer<Product> productCnt
 
         def open(Product product, DataContext parentContext) {
+            mockLoad(product)
+
             dataContext = dataContextFactory.createDataContext()
             if (parentContext != null)
                 dataContext.setParent(parentContext)
@@ -111,10 +113,8 @@ class CompositionTest extends WebSpec {
             } else {
                 productCnt.item = dataContext.find(Product, product.id)
             }
-        }
 
-        def commit() {
-            dataContext.commit()
+            TestServiceProxy.clear()
         }
     }
 
@@ -146,16 +146,17 @@ class CompositionTest extends WebSpec {
         })
     }
 
-    private List mockCommit() {
+    private Map<String, List> mockCommit() {
         def updated = []
+        def removed = []
         TestServiceProxy.mock(DataService, Mock(DataService) {
             commit(_) >> { CommitContext cc ->
-                println ">>> committing $cc.commitInstances"
                 updated.addAll(cc.commitInstances)
+                removed.addAll(cc.removeInstances)
                 TestServiceProxy.getDefault(DataService).commit(cc)
             }
         })
-        updated
+        [upd: updated, rem: removed]
     }
 
     private static <T> T makeSaved(T entity) {
@@ -168,7 +169,6 @@ class CompositionTest extends WebSpec {
 
         when:
 
-        mockLoad(order1)
         orderScreen.open(order1)
 
         then:
@@ -178,13 +178,12 @@ class CompositionTest extends WebSpec {
         when:
 
         orderScreen.orderCnt.item.number = '222'
-        List updated = mockCommit()
-
-        orderScreen.commit()
+        def committed = mockCommit()
+        orderScreen.dataContext.commit()
 
         then:
 
-        updated.size() == 1
+        committed.upd.size() == 1
     }
 
     def "one level of composition"() {
@@ -192,51 +191,49 @@ class CompositionTest extends WebSpec {
         EntitySerializationAPI entitySerialization = cont.getBean(EntitySerializationAPI.NAME, EntitySerializationAPI)
 
         def orderScreen = new OrderScreen()
-        def orderLineScreen = new OrderLineScreen()
+        def orderLineScreen = new LineScreen()
 
         when:
 
-        mockLoad(order1)
         orderScreen.open(order1)
 
         then:
 
         orderScreen.orderCnt.item == order1
-        orderScreen.orderLinesCnt.items.size() == 2
-        orderScreen.orderLinesCnt.item == null
+        orderScreen.linesCnt.items.size() == 2
+        orderScreen.linesCnt.item == null
 
         when: "open edit screen for orderLine11"
 
-        orderScreen.orderLinesCnt.item = orderLine11
-        mockLoad(orderScreen.orderLinesCnt.item)
-        orderLineScreen.open(orderScreen.orderLinesCnt.item, orderScreen.dataContext)
+        orderScreen.linesCnt.item = orderLine11
+        orderLineScreen.open(orderScreen.linesCnt.item, orderScreen.dataContext)
 
         then:
 
         !orderScreen.dataContext.hasChanges()
-        orderLineScreen.orderLineCnt.item == orderLine11
-        orderLineScreen.orderLineCnt.item.quantity == 10
+        orderLineScreen.lineCnt.item == orderLine11
+        orderLineScreen.lineCnt.item.quantity == 10
 
         when: "change orderLine11.quantity and commit child context"
 
-        orderLineScreen.orderLineCnt.item.quantity = 11
+        orderLineScreen.lineCnt.item.quantity = 11
 
         def childContextStateBeforeCommit = entitySerialization.toJson(orderLineScreen.dataContext.getAll())
 
-        def updated = mockCommit()
+        def committed = mockCommit()
         def modified = []
         orderLineScreen.dataContext.addPreCommitListener { e ->
             modified.addAll(e.modifiedInstances)
         }
-        orderLineScreen.commit()
+        orderLineScreen.dataContext.commit()
 
         def childContextStateAfterCommit = entitySerialization.toJson(orderLineScreen.dataContext.getAll())
 
         then: "child context committed orderLine11 to parent"
 
         modified.contains(orderLine11)
-        updated.isEmpty()
-        orderScreen.orderLinesCnt.item.quantity == 11
+        committed.upd.isEmpty()
+        orderScreen.linesCnt.item.quantity == 11
 
         and: "child context has no changes anymore"
 
@@ -248,32 +245,29 @@ class CompositionTest extends WebSpec {
 
         when: "commit parent context"
 
-        orderScreen.commit()
+        orderScreen.dataContext.commit()
 
         then: "orderLine11 committed to DataService"
 
-        updated.size() == 1
-        updated.contains(orderLine11)
-        updated.find { it == orderLine11 }.quantity == 11
+        committed.upd.size() == 1
+        committed.upd.contains(orderLine11)
+        committed.upd.find { it == orderLine11 }.quantity == 11
     }
 
     def "two levels of composition"() {
 
         def orderScreen = new OrderScreen()
-        def orderLineScreen = new OrderLineScreen()
+        def orderLineScreen = new LineScreen()
         def productScreen = new ProductScreen()
 
         when:
 
-        mockLoad(order1)
         orderScreen.open(order1)
 
-        orderScreen.orderLinesCnt.item = orderLine11
-        mockLoad(orderScreen.orderLinesCnt.item)
-        orderLineScreen.open(orderScreen.orderLinesCnt.item, orderScreen.dataContext)
+        orderScreen.linesCnt.item = orderLine11
+        orderLineScreen.open(orderScreen.linesCnt.item, orderScreen.dataContext)
 
-        mockLoad(orderScreen.orderLinesCnt.item.product)
-        productScreen.open(orderScreen.orderLinesCnt.item.product, orderLineScreen.dataContext)
+        productScreen.open(orderScreen.linesCnt.item.product, orderLineScreen.dataContext)
 
         then:
 
@@ -283,70 +277,99 @@ class CompositionTest extends WebSpec {
 
         productScreen.productCnt.item.price = 101
 
-        def updated = mockCommit()
-        productScreen.commit()
+        def committed = mockCommit()
+        productScreen.dataContext.commit()
 
         then:
 
-        updated.isEmpty()
+        committed.upd.isEmpty()
 
         when:
 
-        orderLineScreen.orderLineCnt.item.quantity = 11
-        orderLineScreen.commit()
+        orderLineScreen.lineCnt.item.quantity = 11
+        orderLineScreen.dataContext.commit()
 
         then:
 
-        updated.isEmpty()
+        committed.upd.isEmpty()
 
         when:
 
-        orderScreen.commit()
+        orderScreen.dataContext.commit()
 
         then:
 
-        updated.size() == 2
-        updated.contains(product11)
-        updated.contains(orderLine11)
-        updated.find { it == product11}.price == 101
-        updated.find { it == orderLine11}.quantity == 11
+        committed.upd.size() == 2
+        committed.upd.contains(product11)
+        committed.upd.contains(orderLine11)
+        committed.upd.find { it == product11}.price == 101
+        committed.upd.find { it == orderLine11}.quantity == 11
     }
 
     def "one level of composition - repetitive edit"() {
 
         def orderScreen = new OrderScreen()
-        def orderLineScreen = new OrderLineScreen()
+        def orderLineScreen = new LineScreen()
 
-        mockLoad(order1)
         orderScreen.open(order1)
 
-        orderScreen.orderLinesCnt.item = orderLine11
-        mockLoad(orderLine11)
-        orderLineScreen.open(orderScreen.orderLinesCnt.item, orderScreen.dataContext)
-        orderLineScreen.orderLineCnt.item.quantity = 11
-        orderLineScreen.commit()
+        orderScreen.linesCnt.item = orderLine11
+        orderLineScreen.open(orderScreen.linesCnt.item, orderScreen.dataContext)
+        orderLineScreen.lineCnt.item.quantity = 11
+        orderLineScreen.dataContext.commit()
 
         when: "open orderLineScreen second time"
 
-        mockLoad(orderLine11)
-        orderLineScreen.open(orderScreen.orderLinesCnt.item, orderScreen.dataContext)
+        orderLineScreen.open(orderScreen.linesCnt.item, orderScreen.dataContext)
 
         then:
 
-        orderLineScreen.orderLineCnt.item.quantity == 11
+        orderLineScreen.lineCnt.item.quantity == 11
 
         when:
 
-        orderLineScreen.orderLineCnt.item.quantity = 12
+        orderLineScreen.lineCnt.item.quantity = 12
 
-        def updated = mockCommit()
-        orderLineScreen.commit()
-        orderScreen.commit()
+        def committed = mockCommit()
+        orderLineScreen.dataContext.commit()
+        orderScreen.dataContext.commit()
 
         then:
 
-        updated.size() == 1
-        updated.find { it == orderLine11}.quantity == 12
+        committed.upd.size() == 1
+        committed.upd.find { it == orderLine11}.quantity == 12
+    }
 
+    def "one level of composition - remove item"() {
+
+        def orderScreen = new OrderScreen()
+        def lineScreen = new LineScreen()
+
+        orderScreen.open(order1)
+
+        orderScreen.linesCnt.item = orderLine11
+        lineScreen.open(orderScreen.linesCnt.item, orderScreen.dataContext)
+
+        def committed = mockCommit()
+
+        when: "remove OrderLine in lineScreen"
+
+        lineScreen.dataContext.remove(lineScreen.lineCnt.item)
+        lineScreen.dataContext.commit()
+
+        then:
+
+        committed.upd.isEmpty()
+        committed.rem.isEmpty()
+
+        when:
+
+        orderScreen.dataContext.commit()
+
+        then:
+
+        committed.upd.isEmpty()
+        committed.rem.size() == 1
+        committed.rem.contains(orderLine11)
     }
 }

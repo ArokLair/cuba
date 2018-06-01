@@ -313,16 +313,29 @@ public class StandardDataContext implements DataContext {
     @Override
     public void remove(Entity entity) {
         Preconditions.checkNotNullArgument(entity, "entity is null");
-        if (contains(entity)) {
-            modifiedInstances.remove(entity);
-            removedInstances.add(entity);
-            entity.removePropertyChangeListener(changeListener);
+        Map<Object, Entity> entityMap = content.get(entity.getClass());
+        if (entityMap != null) {
+            Entity mergedEntity = entityMap.get(entity.getId());
+            if (mergedEntity != null) {
+                modifiedInstances.remove(entity);
+                removedInstances.add(entity);
+                entityMap.remove(entity.getId());
+                entity.removePropertyChangeListener(changeListener);
+            }
         }
     }
 
     @Override
     public void evict(Entity entity) {
-
+        Preconditions.checkNotNullArgument(entity, "entity is null");
+        Map<Object, Entity> entityMap = content.get(entity.getClass());
+        if (entityMap != null) {
+            Entity mergedEntity = entityMap.get(entity.getId());
+            if (mergedEntity != null) {
+                entityMap.remove(entity.getId());
+                entity.removePropertyChangeListener(changeListener);
+            }
+        }
     }
 
     @Override

@@ -549,6 +549,58 @@ class DataContextTest extends Specification {
         modified.contains(user1Role1)
     }
 
+    def "remove"() {
+        DataContext context = factory.createDataContext()
+
+        User user1 = new User(login: 'u1', name: 'User 1')
+        makeDetached(user1)
+        context.merge(user1)
+
+        when:
+
+        context.remove(user1)
+
+        then:
+
+        context.find(User, user1.id) == null
+
+        when:
+
+        def removed = []
+        context.addPreCommitListener { e -> removed.addAll(e.removedInstances) }
+        context.commit()
+
+        then:
+
+        removed.contains(user1)
+    }
+
+    def "evict"() {
+        DataContext context = factory.createDataContext()
+
+        User user1 = new User(login: 'u1', name: 'User 1')
+        makeDetached(user1)
+        context.merge(user1)
+
+        when:
+
+        context.evict(user1)
+
+        then:
+
+        context.find(User, user1.id) == null
+
+        when:
+
+        def removed = []
+        context.addPreCommitListener { e -> removed.addAll(e.removedInstances) }
+        context.commit()
+
+        then:
+
+        removed.isEmpty()
+    }
+
     private <T> T createDetached(Class<T> entityClass) {
         def entity = metadata.create(entityClass)
         entityStates.makeDetached(entity)
