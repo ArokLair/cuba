@@ -132,6 +132,14 @@ public class InstanceContainerImpl<T extends Entity> implements InstanceContaine
         }
     }
 
+    @Override
+    public String toString() {
+        return "InstanceContainerImpl{" +
+                "entity=" + entityMetaClass +
+                ", view=" + view +
+                '}';
+    }
+
     protected class ItemListener implements Instance.PropertyChangeListener {
         @SuppressWarnings("unchecked")
         @Override
