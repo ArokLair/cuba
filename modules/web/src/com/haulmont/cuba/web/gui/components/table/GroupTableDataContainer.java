@@ -193,6 +193,10 @@ public class GroupTableDataContainer<I> extends SortableDataContainer<I> impleme
             return Collections.emptyList();
         }
 
+        return getCachedItemIds();
+    }
+
+    protected List getCachedItemIds() {
         if (cachedItemIds == null) {
             List<Object> result = new ArrayList<>();
             //noinspection unchecked
@@ -239,5 +243,68 @@ public class GroupTableDataContainer<I> extends SortableDataContainer<I> impleme
             return getItemIds().size();
         }
         return super.size();
+    }
+
+    @Override
+    public Object firstItemId() {
+        if (hasGroups()) {
+            return first;
+        }
+        return super.firstItemId();
+    }
+
+    @Override
+    public Object lastItemId() {
+        if (hasGroups()) {
+            return last;
+        }
+        return super.lastItemId();
+    }
+
+    @Override
+    public Object nextItemId(Object itemId) {
+        if (hasGroups()) {
+            if (itemId == null) {
+                return null;
+            }
+            if (isLastId(itemId)) {
+                return null;
+            }
+            int index = getCachedItemIds().indexOf(itemId);
+            return getCachedItemIds().get(index + 1);
+        }
+        return super.nextItemId(itemId);
+    }
+
+    @Override
+    public Object prevItemId(Object itemId) {
+        if (hasGroups()) {
+            if (itemId == null) {
+                return null;
+            }
+
+            if (isFirstId(itemId)) {
+                return null;
+            }
+            int index = getCachedItemIds().indexOf(itemId);
+            return getCachedItemIds().get(index - 1);
+        }
+        return super.prevItemId(itemId);
+    }
+
+    @Override
+    public boolean isFirstId(Object itemId) {
+        if (hasGroups()) {
+            return itemId != null && itemId.equals(first);
+        }
+        return super.isFirstId(itemId);
+    }
+
+    @Override
+    public boolean isLastId(Object itemId) {
+        if (hasGroups()) {
+            return itemId != null && itemId.equals(last);
+        }
+        return super.isLastId(itemId);
     }
 }

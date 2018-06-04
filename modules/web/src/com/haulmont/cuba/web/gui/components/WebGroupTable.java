@@ -30,7 +30,6 @@ import com.haulmont.cuba.gui.data.GroupDatasource;
 import com.haulmont.cuba.gui.data.GroupInfo;
 import com.haulmont.cuba.web.gui.components.table.GroupTableDataContainer;
 import com.haulmont.cuba.web.gui.components.table.TableDataContainer;
-import com.haulmont.cuba.web.gui.data.ItemWrapper;
 import com.haulmont.cuba.web.widgets.CubaGroupTable;
 import com.haulmont.cuba.web.widgets.CubaGroupTable.GroupAggregationContext;
 import com.haulmont.cuba.web.widgets.data.AggregationContainer;
@@ -398,7 +397,10 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
 
         if (groupCellValueFormatter != null) {
             List<Entity> groupItems = component.getGroupItemIds(groupId).stream()
-                    .map(itemId -> ((ItemWrapper) component.getItem(itemId)).getItem()) // vaadin8 get rid of ItemWrapper
+                    .map(itemId -> {
+                        TableDataContainer container = (TableDataContainer) component.getContainerDataSource();
+                        return (Entity) container.getInternalItem(itemId);
+                    })
                     .collect(Collectors.toList());
 
             @SuppressWarnings("unchecked")
@@ -433,7 +435,10 @@ public class WebGroupTable<E extends Entity> extends WebAbstractTable<CubaGroupT
                 }
 
                 Object itemId = children.iterator().next();
-                Instance item = ((ItemWrapper) component.getItem(itemId)).getItem(); // vaadin8 get rid of ItemWrapper
+
+                TableDataContainer container = (TableDataContainer) component.getContainerDataSource();
+
+                Instance item = (Instance) container.getInternalItem(itemId);
                 Object captionValue = item.getValueEx(captionProperty);
                 // vaadin8 use metadataTools format with metaproperty
                 return metadataTools.format(captionValue);

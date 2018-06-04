@@ -57,12 +57,12 @@ public interface GroupTableSource<I> extends TableSource.Sortable<I> {
      * @return the parent group of passed item
      */
     @Nullable
-    GroupInfo getParentGroup(I entity);
+    GroupInfo getParentGroup(I item);
 
     /**
      * @return the path through all parent groups
      */
-    List<GroupInfo> getGroupPath(I entity);
+    List<GroupInfo> getGroupPath(I item);
 
     /**
      * @return a group property
