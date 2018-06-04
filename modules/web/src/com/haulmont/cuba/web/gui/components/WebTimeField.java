@@ -39,8 +39,6 @@ import java.util.Date;
 public class WebTimeField extends WebV8AbstractField<CubaTimeField, LocalTime, Date>
         implements TimeField, InitializingBean {
 
-    protected String placeholder;
-
     protected Resolution resolution = Resolution.MIN;
 
     public WebTimeField() {
