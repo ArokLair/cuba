@@ -46,19 +46,19 @@ public class DataContextFactory implements ApplicationContextAware {
         return new StandardDataContext(applicationContext);
     }
 
-    public <T extends Entity> InstanceContainer<T> createInstanceContainer(Class<T> entityClass) {
+    public <E extends Entity> InstanceContainer<E> createInstanceContainer(Class<E> entityClass) {
         return new InstanceContainerImpl<>(metadata.getClassNN(entityClass));
     }
 
-    public <T extends Entity> CollectionContainer<T> createCollectionContainer(Class<T> entityClass) {
+    public <E extends Entity> CollectionContainer<E> createCollectionContainer(Class<E> entityClass) {
         return new CollectionContainerImpl<>(metadata.getClassNN(entityClass));
     }
 
-    public <T extends Entity<K>, K> InstanceLoader<T, K> createInstanceLoader() {
+    public <E extends Entity<K>, K> InstanceLoader<E, K> createInstanceLoader() {
         return new StandardInstanceLoader<>(applicationContext);
     }
 
-    public <T extends Entity> CollectionLoader<T> createCollectionLoader() {
+    public <E extends Entity> CollectionLoader<E> createCollectionLoader() {
         return new StandardCollectionLoader<>(applicationContext);
     }
 }

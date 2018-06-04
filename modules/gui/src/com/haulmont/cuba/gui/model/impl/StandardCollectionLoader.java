@@ -32,12 +32,12 @@ import java.util.List;
 /**
  *
  */
-public class StandardCollectionLoader<T extends Entity> implements CollectionLoader<T> {
+public class StandardCollectionLoader<E extends Entity> implements CollectionLoader<E> {
 
     private ApplicationContext applicationContext;
 
     private DataContext dataContext;
-    private CollectionContainer<T> container;
+    private CollectionContainer<E> container;
     private String query;
     private int maxResults;
     private boolean softDeletion;
@@ -76,7 +76,7 @@ public class StandardCollectionLoader<T extends Entity> implements CollectionLoa
             throw new IllegalStateException("query is null");
 
         @SuppressWarnings("unchecked")
-        LoadContext<T> loadContext = LoadContext.create(container.getEntityMetaClass().getJavaClass());
+        LoadContext<E> loadContext = LoadContext.create(container.getEntityMetaClass().getJavaClass());
 
         LoadContext.Query query = loadContext.setQueryString(this.query);
 
@@ -94,10 +94,10 @@ public class StandardCollectionLoader<T extends Entity> implements CollectionLoa
             loadContext.setView(view);
         }
 
-        List<T> list = getDataManager().loadList(loadContext);
+        List<E> list = getDataManager().loadList(loadContext);
 
         if (dataContext != null) {
-            for (T entity : list) {
+            for (E entity : list) {
                 dataContext.merge(entity);
             }
         }
@@ -105,12 +105,12 @@ public class StandardCollectionLoader<T extends Entity> implements CollectionLoa
     }
 
     @Override
-    public CollectionContainer<T> getContainer() {
+    public CollectionContainer<E> getContainer() {
         return container;
     }
 
     @Override
-    public void setContainer(CollectionContainer<T> container) {
+    public void setContainer(CollectionContainer<E> container) {
         this.container = container;
     }
 

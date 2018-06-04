@@ -22,11 +22,11 @@ import com.haulmont.cuba.core.global.View;
 /**
  *
  */
-public interface CollectionLoader<T extends Entity> extends DataLoader {
+public interface CollectionLoader<E extends Entity> extends DataLoader {
 
-    CollectionContainer<T> getContainer();
+    CollectionContainer<E> getContainer();
 
-    void setContainer(CollectionContainer<T> container);
+    void setContainer(CollectionContainer<E> container);
 
     String getQuery();
 
