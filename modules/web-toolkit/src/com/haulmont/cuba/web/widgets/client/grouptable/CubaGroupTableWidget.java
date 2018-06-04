@@ -60,7 +60,7 @@ public class CubaGroupTableWidget extends CubaScrollTableWidget {
 
     private void addGroupColumn(String colKey) {
         if (groupColumns == null) {
-            groupColumns = new HashSet<String>();
+            groupColumns = new HashSet<>();
         }
         groupColumns.add(colKey);
     }
@@ -542,7 +542,7 @@ public class CubaGroupTableWidget extends CubaScrollTableWidget {
             }
 
             private void calcAndSetWidthForSpannedCell() {
-                final int cells = tHead.getVisibleCellCount();
+                int cells = tHead.getVisibleCellCount();
                 for (int i = 0; i < groupColIndex; i++) {
                     int w = CubaGroupTableWidget.this.getColWidth(getColKeyByIndex(i));
                     if (w < 0) {

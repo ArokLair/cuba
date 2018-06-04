@@ -16,7 +16,6 @@
 
 package com.haulmont.cuba.gui.components.data;
 
-import com.haulmont.cuba.core.entity.Entity;
 import com.haulmont.cuba.gui.data.GroupInfo;
 
 import javax.annotation.Nullable;
@@ -47,23 +46,23 @@ public interface GroupTableSource<I> extends TableSource.Sortable<I> {
     /**
      * @return the list of nested items
      */
-    List<Entity> getOwnChildItems(GroupInfo groupId);
+    List<I> getOwnChildItems(GroupInfo groupId);
 
     /**
      * @return the list of items from all nested group levels
      */
-    List<Entity> getChildItems(GroupInfo groupId);
+    List<I> getChildItems(GroupInfo groupId);
 
     /**
      * @return the parent group of passed item
      */
     @Nullable
-    GroupInfo getParentGroup(Entity entity);
+    GroupInfo getParentGroup(I entity);
 
     /**
      * @return the path through all parent groups
      */
-    List<GroupInfo> getGroupPath(Entity entity);
+    List<GroupInfo> getGroupPath(I entity);
 
     /**
      * @return a group property

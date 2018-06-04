@@ -18,7 +18,6 @@ package com.haulmont.cuba.web.gui.components.table;
 
 import com.haulmont.cuba.gui.components.data.BindingState;
 import com.haulmont.cuba.gui.components.data.GroupTableSource;
-import com.haulmont.cuba.gui.data.GroupDatasource;
 import com.haulmont.cuba.gui.data.GroupInfo;
 import com.haulmont.cuba.web.widgets.data.GroupTableContainer;
 
@@ -63,7 +62,7 @@ public class GroupTableDataContainer<I> extends SortableDataContainer<I> impleme
 
     protected void doGroup(Object[] properties) {
         Set<GroupInfo> expandState = saveState();
-        ((GroupDatasource) tableSource).groupBy(properties);
+        getGroupTableSource().groupBy(properties);
         restoreState(expandState);
         resetCachedItems();
 

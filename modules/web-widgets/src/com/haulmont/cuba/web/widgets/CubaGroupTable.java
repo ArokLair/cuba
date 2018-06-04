@@ -131,9 +131,10 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
         }
 
         if (variables.containsKey("collapsedcolumns")) {
-            Object[] ids = (Object[]) variables
-                    .get("collapsedcolumns");
-            Set<Object> idSet = new HashSet<>();
+            Object[] ids = (Object[]) variables.get("collapsedcolumns");
+
+            Set<Object> idSet = ids.length > 0 ? new HashSet<>() : Collections.emptySet();
+
             for (Object id : ids) {
                 idSet.add(_columnIdMap().get(id.toString()));
             }
@@ -153,14 +154,16 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
             }
         }
 
-        if ((hasGroupDisallowedProperties(newGroupProperties) || fixedGrouping) && isGroupsChanged(newGroupProperties)) {
+        if ((hasGroupDisallowedProperties(newGroupProperties) || fixedGrouping)
+                && isGroupsChanged(newGroupProperties)) {
             requestColumnReorderingAllowed = false;
             markAsDirty();
         }
 
         super.changeVariables(source, variables);
 
-        if (!(hasGroupDisallowedProperties(newGroupProperties) || fixedGrouping) && newGroupProperties != null && isGroupsChanged(newGroupProperties)) {
+        if (!(hasGroupDisallowedProperties(newGroupProperties) || fixedGrouping)
+                && newGroupProperties != null && isGroupsChanged(newGroupProperties)) {
             groupBy(newGroupProperties, true);
         }
 
@@ -253,6 +256,7 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
         return !isGroup(itemId);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void paintRowAttributes(PaintTarget target, Object itemId) throws PaintException {
         super.paintRowAttributes(target, itemId);
@@ -265,11 +269,14 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
             if (isGroup(itemId)) {
                 target.addAttribute("colKey", _columnIdMap().key(getGroupProperty(itemId)));
                 target.addAttribute("groupKey", groupIdMap.key(itemId));
-                if (isExpanded(itemId))
-                    target.addAttribute("expanded", true);
 
-                final Object propertyValue = getGroupPropertyValue(itemId);
-                target.addAttribute("groupCaption", formatGroupPropertyValue(itemId, propertyValue));
+                if (isExpanded(itemId)) {
+                    target.addAttribute("expanded", true);
+                }
+
+                Object propertyValue = getGroupPropertyValue(itemId);
+                String formattedValue = formatGroupPropertyValue(itemId, propertyValue);
+                target.addAttribute("groupCaption", formattedValue);
 
                 if (hasAggregation) {
                     paintGroupAggregation(target, itemId,
@@ -297,7 +304,7 @@ public class CubaGroupTable extends CubaTable implements GroupTableContainer {
         Collection groupProperties = getGroupProperties();
         Object groupProperty = getGroupProperty(groupId);
 
-        for (final Object columnId : _visibleColumns()) {
+        for (Object columnId : _visibleColumns()) {
             if (columnId == null || isColumnCollapsed(columnId)) {
                 continue;
             }

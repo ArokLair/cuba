@@ -52,23 +52,23 @@ public interface GroupDatasource<T extends Entity<K>, K> extends CollectionDatas
     /**
      * @return the list of nested items
      */
-    List<Entity> getOwnChildItems(GroupInfo groupId);
+    List<T> getOwnChildItems(GroupInfo groupId);
 
     /**
      * @return the list of items from all nested group levels
      */
-    List<Entity> getChildItems(GroupInfo groupId);
+    List<T> getChildItems(GroupInfo groupId);
 
     /**
      * @return the parent group of passed item
      */
     @Nullable
-    GroupInfo getParentGroup(Entity entity);
+    GroupInfo getParentGroup(T entity);
 
     /**
      * @return the path through all parent groups
      */
-    List<GroupInfo> getGroupPath(Entity entity);
+    List<GroupInfo> getGroupPath(T entity);
 
     /**
      * @return a group property

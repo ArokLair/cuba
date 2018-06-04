@@ -26,8 +26,7 @@ public class GroupInfo<P> {
     @SuppressWarnings("unchecked")
     public GroupInfo(LinkedMap groupingValues) {
         this.groupingValues = new LinkedMap(groupingValues);
-        //noinspection unchecked
-        groupProperty = (P) groupingValues.get(groupingValues.size() - 1);
+        this.groupProperty = (P) groupingValues.get(groupingValues.size() - 1);
     }
 
     public Object getPropertyValue(P propertyPath) {
