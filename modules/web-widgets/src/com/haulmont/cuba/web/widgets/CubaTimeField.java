@@ -67,6 +67,11 @@ public class CubaTimeField extends AbstractField<LocalTime> {
 
     protected LocalTime value;
 
+    // values used to define field width according to time format
+    protected int digitWidth = 20;
+    protected int digitPadding = 12;
+    protected int separatorWidth = 6;
+
     public CubaTimeField() {
         getState(false).maskedMode = true;
 
@@ -138,6 +143,7 @@ public class CubaTimeField extends AbstractField<LocalTime> {
         this.timeFormat = timeFormat;
 
         updateTimeFormat();
+        updateWidth();
     }
 
     protected void updateTimeFormat() {
@@ -152,7 +158,9 @@ public class CubaTimeField extends AbstractField<LocalTime> {
 
     public void setResolution(TimeResolution resolution) {
         this.resolution = resolution;
+
         updateResolution();
+        updateWidth();
     }
 
     protected void updateResolution() {
@@ -209,5 +217,49 @@ public class CubaTimeField extends AbstractField<LocalTime> {
             dateTimeFormatter = dateTimeFormatter.withLocale(locale);
         }
         return dateTimeFormatter;
+    }
+
+    protected void updateWidth() {
+        int partsCount;
+        switch (resolution) {
+            case HOUR:
+                partsCount = 1;
+                break;
+            case MINUTE:
+                partsCount = 2;
+                break;
+            case SECOND:
+                partsCount = 3;
+                break;
+            default:
+                throw new IllegalArgumentException("Cannot detect resolution type");
+        }
+
+        int newWidth = digitPadding + digitWidth * partsCount + separatorWidth * (partsCount - 1);
+        setWidth(newWidth, Unit.PIXELS);
+    }
+
+    public int getDigitWidth() {
+        return digitWidth;
+    }
+
+    public void setDigitWidth(int digitWidth) {
+        this.digitWidth = digitWidth;
+    }
+
+    public int getDigitPadding() {
+        return digitPadding;
+    }
+
+    public void setDigitPadding(int digitPadding) {
+        this.digitPadding = digitPadding;
+    }
+
+    public int getSeparatorWidth() {
+        return separatorWidth;
+    }
+
+    public void setSeparatorWidth(int separatorWidth) {
+        this.separatorWidth = separatorWidth;
     }
 }
