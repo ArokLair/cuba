@@ -16,240 +16,116 @@
  */
 package com.haulmont.cuba.web.gui.components;
 
+import com.haulmont.bali.util.DateTimeUtils;
+import com.haulmont.bali.util.Preconditions;
 import com.haulmont.chile.core.datatypes.Datatypes;
 import com.haulmont.chile.core.model.MetaProperty;
 import com.haulmont.chile.core.model.MetaPropertyPath;
 import com.haulmont.cuba.core.global.UserSessionSource;
-import com.haulmont.cuba.gui.components.DateField;
 import com.haulmont.cuba.gui.components.TimeField;
 import com.haulmont.cuba.gui.components.data.ConversionException;
 import com.haulmont.cuba.gui.components.data.EntityValueSource;
 import com.haulmont.cuba.gui.components.data.ValueSource;
 import com.haulmont.cuba.gui.components.data.value.DatasourceValueSource;
-import com.haulmont.cuba.gui.theme.ThemeConstants;
-import com.haulmont.cuba.web.App;
-import com.haulmont.cuba.web.widgets.CubaMaskedTextField;
 import com.haulmont.cuba.web.widgets.CubaTimeField;
-import org.apache.commons.lang.StringUtils;
+import com.haulmont.cuba.web.widgets.client.timefield.TimeResolution;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.sql.Time;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.util.Date;
 
-public class WebTimeField extends WebV8AbstractField<CubaMaskedTextField, String, Date>
+public class WebTimeField extends WebV8AbstractField<CubaTimeField, LocalTime, Date>
         implements TimeField, InitializingBean {
 
-    protected boolean showSeconds;
-
     protected String placeholder;
-    protected String timeFormat;
-    protected DateField.Resolution resolution;
+
+    protected Resolution resolution = Resolution.MIN;
 
     public WebTimeField() {
-        resolution = DateField.Resolution.MIN;
-
-        component = new CubaMaskedTextField();
-        component.setMaskedMode(true);
-//        component.setTimeMask(true);
+        component = new CubaTimeField();
 
         attachValueChangeListener(component);
-
-        // vaadin8
-//        component.setInvalidAllowed(false);
-//        component.setInvalidCommitted(true);
-        /*component.addValidator(value -> {
-            if (!(!(value instanceof String) || checkStringValue((String) value))) {
-                component.markAsDirty();
-                throw new com.vaadin.v7.data.Validator.InvalidValueException("Unable to parse value: " + value);
-            }
-        });*/
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
         UserSessionSource userSessionSource = applicationContext.getBean(UserSessionSource.class);
-        timeFormat = Datatypes.getFormatStringsNN(userSessionSource.getLocale()).getTimeFormat();
-        setShowSeconds(timeFormat.contains("ss"));
-
+        String timeFormat = Datatypes.getFormatStringsNN(userSessionSource.getLocale()).getTimeFormat();
+        setFormat(timeFormat);
     }
 
     public boolean isAmPmUsed() {
-        return timeFormat.contains("a");
-    }
-
-    protected void updateWidth() {
-        if (!App.isBound()) {
-            return;
-        }
-
-        App app = App.getInstance();
-
-        ThemeConstants theme = app.getThemeConstants();
-        int digitWidth = theme.getInt("cuba.web.WebTimeField.digitWidth");
-        int digitPadding = theme.getInt("cuba.web.WebTimeField.digitPadding");
-        int separatorWidth = theme.getInt("cuba.web.WebTimeField.separatorWidth");
-
-        int partsCount = isAmPmUsed() ? 1 : 0;
-        int newWidth = isAmPmUsed() ? digitWidth + digitPadding : digitPadding;
-        if (showSeconds) {
-            newWidth = newWidth + digitWidth;
-            partsCount += 1;
-        }
-        switch (resolution) {
-            case HOUR:
-                partsCount += 1;
-                newWidth = digitWidth + newWidth;
-                break;
-            case MIN:
-            case SEC:
-                partsCount += 2;
-                newWidth = digitWidth * 2 + newWidth;
-                break;
-        }
-
-        newWidth += (partsCount - 1) * separatorWidth;
-
-        component.setWidth(newWidth + "px");
-    }
-
-    // VAADIN8: gg, do we need this method?
-//    protected boolean checkStringValue(String value) {
-//        if (value.equals(placeholder) || StringUtils.isEmpty(value))
-//            return true;
-//        SimpleDateFormat sdf = new SimpleDateFormat(timeFormat);
-//        sdf.setLenient(false);
-//        try {
-//            sdf.parse(value);
-//            return true;
-//        } catch (ParseException e) {
-//            return false;
-//        }
-//    }
-
-    @Override
-    protected Date convertToModel(String componentRawValue) throws ConversionException {
-        // TODO: gg, implement
-//        if (StringUtils.isNotEmpty(componentRawValue) && !componentRawValue.equals(placeholder)) {
-//            try {
-//                SimpleDateFormat sdf = new SimpleDateFormat(timeFormat);
-//                sdf.setLenient(false);
-//
-//                Date date = sdf.parse(componentRawValue);
-//                if (component.getComponentError() != null) {
-//                    component.setComponentError(null);
-//                }
-//
-//                ValueSource<Date> valueSource = getValueSource();
-//                if (valueSource instanceof EntityValueSource) {
-//                    MetaPropertyPath metaPropertyPath = ((DatasourceValueSource) valueSource).getMetaPropertyPath();
-//                    MetaProperty metaProperty = metaPropertyPath.getMetaProperty();
-//                    if (metaProperty != null) {
-//                        Class javaClass = metaProperty.getRange().asDatatype().getJavaClass();
-//                        if (javaClass.equals(java.sql.Time.class)) {
-//                            return new Time(date.getTime());
-//                        }
-//                        if (javaClass.equals(java.sql.Date.class)) {
-//                            LoggerFactory.getLogger(WebTimeField.class).warn("Do not use java.sql.Date with time field");
-//                            return new java.sql.Date(date.getTime());
-//                        }
-//                    }
-//                }
-//                return date;
-//            } catch (Exception e) {
-//                LoggerFactory.getLogger(WebTimeField.class)
-//                        .debug("Unable to parse value of component {}:\n{}", getId(), e.getMessage());
-//                throw new ConversionException("Invalid value");
-//            }
-//        } else {
-//            return null;
-//        }
-        return null;
+        // FIXME: gg, actually, not working
+        return component.getTimeFormat().contains("a");
     }
 
     @Override
-    protected String convertToPresentation(Date modelValue) throws ConversionException {
-        // TODO: gg, implement
-//        if (modelValue != null) {
-//            SimpleDateFormat sdf = new SimpleDateFormat(timeFormat);
-//            return sdf.format(modelValue);
-//        } else {
-//            return "";
-//        }
-        return "";
+    protected Date convertToModel(LocalTime componentRawValue) throws ConversionException {
+        if (componentRawValue == null) {
+            return null;
+        }
+
+        Date date = DateTimeUtils.asDate(componentRawValue);
+
+        ValueSource<Date> valueSource = getValueSource();
+        if (valueSource instanceof EntityValueSource) {
+            MetaPropertyPath metaPropertyPath = ((DatasourceValueSource) valueSource).getMetaPropertyPath();
+            MetaProperty metaProperty = metaPropertyPath.getMetaProperty();
+            if (metaProperty != null) {
+                Class javaClass = metaProperty.getRange().asDatatype().getJavaClass();
+                if (javaClass.equals(java.sql.Time.class)) {
+                    return new Time(date.getTime());
+                }
+
+                if (javaClass.equals(java.sql.Date.class)) {
+                    LoggerFactory.getLogger(WebTimeField.class).warn("Do not use java.sql.Date with time field");
+                    return new java.sql.Date(date.getTime());
+                }
+            }
+        }
+
+        return date;
     }
 
     @Override
-    public boolean getShowSeconds() {
-        return showSeconds;
+    protected LocalTime convertToPresentation(Date modelValue) throws ConversionException {
+        return modelValue != null ? DateTimeUtils.asLocalTime(modelValue) : null;
     }
 
     @Override
     public void setFormat(String format) {
-        // TODO: gg, implement
-//        timeFormat = format;
-//        showSeconds = timeFormat.contains("ss");
-//        updateTimeFormat();
-
-//        updateWidth();
+        component.setTimeFormat(format);
     }
 
     @Override
     public String getFormat() {
-        return timeFormat;
+        return component.getTimeFormat();
     }
 
-    public void setResolution(DateField.Resolution resolution) {
-        // TODO: gg, implement
+    @Override
+    public Resolution getResolution() {
+        return resolution;
+    }
 
-//        this.resolution = resolution;
-//        if (resolution.ordinal() <= DateField.Resolution.SEC.ordinal()) {
-//            setShowSeconds(true);
-//        } else if (resolution.ordinal() <= DateField.Resolution.MIN.ordinal()) {
-//            setShowSeconds(false);
-//        } else if (resolution.ordinal() <= DateField.Resolution.HOUR.ordinal()) {
-//            StringBuilder builder = new StringBuilder(timeFormat);
-//            if (timeFormat.contains("mm")) {
-//                int minutesIndex = builder.indexOf("mm");
-//                builder.delete(minutesIndex > 0 ? --minutesIndex : minutesIndex, minutesIndex + 3);
-//                timeFormat = builder.toString();
-//            }
-//            setShowSeconds(false);
-//        }
+    @Override
+    public void setResolution(Resolution resolution) {
+        Preconditions.checkNotNullArgument(resolution);
+
+        this.resolution = resolution;
+        TimeResolution vResolution = WebComponentsHelper.convertTimeResolution(resolution);
+        component.setResolution(vResolution);
+    }
+
+    @Override
+    public boolean getShowSeconds() {
+        return resolution == Resolution.SEC;
     }
 
     @Override
     public void setShowSeconds(boolean showSeconds) {
-        // TODO: gg, implement
-//        this.showSeconds = showSeconds;
-//        if (showSeconds) {
-//            if (!timeFormat.contains("ss")) {
-//                int minutesIndex = timeFormat.indexOf("mm");
-//                StringBuilder builder = new StringBuilder(timeFormat);
-//                builder.insert(minutesIndex + 2, ":ss");
-//                timeFormat = builder.toString();
-//            }
-//        } else {
-//            if (timeFormat.contains("ss")) {
-//                int secondsIndex = timeFormat.indexOf("ss");
-//                StringBuilder builder = new StringBuilder(timeFormat);
-//                builder.delete(secondsIndex > 0 ? --secondsIndex : secondsIndex, secondsIndex + 3);
-//                timeFormat = builder.toString();
-//            }
-//        }
-//        updateTimeFormat();
-//        updateWidth();
-    }
-
-    protected void updateTimeFormat() {
-        // TODO: gg, implement
-//        String mask = StringUtils.replaceChars(timeFormat, "Hhmsa", "####U");
-//        placeholder = StringUtils.replaceChars(mask, "#U", "__");
-//        component.setMask(mask);
-//        vaadin8
-//        component.setNullRepresentation(placeholder);
+        setResolution(Resolution.SEC);
     }
 
     @Override

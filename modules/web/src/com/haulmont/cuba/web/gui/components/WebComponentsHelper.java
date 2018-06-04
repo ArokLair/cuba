@@ -32,6 +32,7 @@ import com.haulmont.cuba.web.WebConfig;
 import com.haulmont.cuba.web.gui.components.util.ShortcutListenerDelegate;
 import com.haulmont.cuba.web.toolkit.VersionedThemeResource;
 import com.haulmont.cuba.web.widgets.*;
+import com.haulmont.cuba.web.widgets.client.timefield.TimeResolution;
 import com.haulmont.cuba.web.widgets.data.AggregationContainer;
 import com.vaadin.event.Action;
 import com.vaadin.event.ShortcutAction;
@@ -447,6 +448,20 @@ public class WebComponentsHelper {
             case MIN:
             default:
                 return DateTimeResolution.MINUTE;
+        }
+    }
+
+    public static TimeResolution convertTimeResolution(TimeField.Resolution resolution) {
+        switch (resolution) {
+            case SEC:
+                return TimeResolution.SECOND;
+
+            case HOUR:
+                return TimeResolution.HOUR;
+
+            case MIN:
+            default:
+                return TimeResolution.MINUTE;
         }
     }
 

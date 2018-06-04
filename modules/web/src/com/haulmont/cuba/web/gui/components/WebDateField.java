@@ -282,7 +282,7 @@ public class WebDateField<V extends Date> extends WebAbstractViewComponent<Layou
 
     protected void __setResolution(Resolution resolution) {
         if (resolution.ordinal() < Resolution.DAY.ordinal()) {
-            timeField.setResolution(resolution);
+//            timeField.setResolution(resolution);
             // while changing resolution, timeField loses its value, so we need to set it again
             updateTimeFieldResolution = true;
             LocalDateTime value = dateField.getValue();

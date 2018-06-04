@@ -141,7 +141,7 @@ public class WebDatePicker<V extends Date> extends WebV8AbstractField<InlineDate
 
     @Override
     protected LocalDate convertToPresentation(Date modelValue) throws ConversionException {
-        return DateTimeUtils.asLocalDate(modelValue);
+        return modelValue != null ? DateTimeUtils.asLocalDate(modelValue) : null;
     }
 
     @Override
