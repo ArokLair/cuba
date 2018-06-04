@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright (c) 2008-2018 Haulmont.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +14,29 @@
  * limitations under the License.
  */
 
-package com.haulmont.cuba.web.widgets.client.timefield;
+@mixin havana-cuba-timefield($primary-stylename: c-timefield) {
+  @include havana-textfield($primary-stylename);
 
-import com.haulmont.cuba.web.widgets.client.textfield.CubaMaskedTextFieldState;
-
-public class CubaTimeFieldState extends CubaMaskedTextFieldState {
-    {
-        primaryStyleName = "c-timefield";
+  .v-ui,
+  .v-window {
+    input.#{$primary-stylename}-empty {
+      color: #ccc;
     }
+
+    input.#{$primary-stylename}-empty:focus {
+      color: inherit;
+    }
+
+    input.#{$primary-stylename}-empty.v-readonly:focus {
+      color: #ccc;
+    }
+  }
+
+  .c-focus-move::selection {
+    background: transparent;
+  }
+
+  .c-focus-move::-moz-selection {
+    background: transparent;
+  }
 }

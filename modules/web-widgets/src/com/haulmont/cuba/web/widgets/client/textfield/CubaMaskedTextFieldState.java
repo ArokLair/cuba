@@ -20,6 +20,7 @@ package com.haulmont.cuba.web.widgets.client.textfield;
 import com.vaadin.shared.annotations.NoLayout;
 
 public class CubaMaskedTextFieldState extends CubaTextFieldState {
+    // FIXME: gg, do we need this?
     {
         primaryStyleName = "c-maskedfield";
     }

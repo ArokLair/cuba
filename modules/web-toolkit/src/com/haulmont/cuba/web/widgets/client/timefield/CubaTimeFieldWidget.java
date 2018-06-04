@@ -20,6 +20,10 @@ import com.haulmont.cuba.web.widgets.client.textfield.CubaMaskedFieldWidget;
 
 public class CubaTimeFieldWidget extends CubaMaskedFieldWidget {
 
+    public static final String CLASSNAME = "c-timefield";
+
+    protected static final String EMPTY_FIELD_CLASSNAME = "c-timefield-empty";
+
     @Override
     public void valueChange(boolean blurred) {
         String newText = getValue();
@@ -36,5 +40,10 @@ public class CubaTimeFieldWidget extends CubaMaskedFieldWidget {
                 setValue(valueBeforeEdit);
             }
         }
+    }
+
+    @Override
+    protected String getEmptyFieldClass() {
+        return EMPTY_FIELD_CLASSNAME;
     }
 }

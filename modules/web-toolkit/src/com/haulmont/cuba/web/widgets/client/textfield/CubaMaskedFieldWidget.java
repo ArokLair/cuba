@@ -164,12 +164,16 @@ public class CubaMaskedFieldWidget extends VTextField {
         valueBuilder = maskValue(value);
         String text = valueBuilder.toString();
         if (text.equals(nullRepresentation) || valueBuilder.length() == 0) {
-            getElement().addClassName(EMPTY_FIELD_CLASS);
+            getElement().addClassName(getEmptyFieldClass());
         } else {
-            getElement().removeClassName(EMPTY_FIELD_CLASS);
+            getElement().removeClassName(getEmptyFieldClass());
         }
 
         super.setText(text);
+    }
+
+    protected String getEmptyFieldClass() {
+        return EMPTY_FIELD_CLASS;
     }
 
     public void valueChange(boolean blurred) {
