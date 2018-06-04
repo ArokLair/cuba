@@ -28,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -83,12 +84,45 @@ public class CubaTimeField extends AbstractField<LocalTime> {
         return (CubaTimeFieldState) super.getState(markAsDirty);
     }
 
+    @Override
+    protected boolean setValue(LocalTime value, boolean userOriginated) {
+        value = applyResolutionToValue(value);
+        return super.setValue(value, userOriginated);
+    }
 
     @Override
     protected void doSetValue(LocalTime value) {
         this.value = value;
 
         getState().text = formatDate(value);
+    }
+
+    protected LocalTime applyResolutionToValue(LocalTime value) {
+        if (value == null) {
+            return null;
+        }
+
+        LocalTime result = LocalTime.MIDNIGHT;
+        List<TimeResolution> resolutions = getResolutionsHigherOrEqualTo(this.resolution)
+                .collect(Collectors.toList());
+
+        for (TimeResolution resolution : resolutions) {
+            switch (resolution) {
+                case HOUR:
+                    result = result.withHour(value.getHour());
+                    break;
+                case MINUTE:
+                    result = result.withMinute(value.getMinute());
+                    break;
+                case SECOND:
+                    result = result.withSecond(value.getSecond());
+                    break;
+                default:
+                    throw new IllegalArgumentException("Cannot detect resolution type");
+            }
+        }
+
+        return result;
     }
 
     @Override
@@ -101,7 +135,6 @@ public class CubaTimeField extends AbstractField<LocalTime> {
     }
 
     public void setTimeFormat(String timeFormat) {
-        // TODO: gg, to do to do do to do to do
         this.timeFormat = timeFormat;
 
         updateTimeFormat();
@@ -123,12 +156,10 @@ public class CubaTimeField extends AbstractField<LocalTime> {
     }
 
     protected void updateResolution() {
-
-        String timeFormat = getResolutionsHigherOrEqualTo(this.resolution)
+        this.timeFormat = getResolutionsHigherOrEqualTo(this.resolution)
                 .map(this::getResolutionFormat)
                 .collect(Collectors.joining(":"));
 
-        this.timeFormat = timeFormat;
         updateTimeFormat();
     }
 

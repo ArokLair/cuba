@@ -19,6 +19,7 @@ package com.haulmont.cuba.web.widgets.client.timefield;
 import com.haulmont.cuba.web.widgets.client.textfield.CubaMaskedTextFieldState;
 
 public class CubaTimeFieldState extends CubaMaskedTextFieldState {
+    // TODO: gg, define
     /*{
         primaryStyleName = "c-timefield";
     }*/
