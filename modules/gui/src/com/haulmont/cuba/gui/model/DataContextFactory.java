@@ -54,11 +54,23 @@ public class DataContextFactory implements ApplicationContextAware {
         return new CollectionContainerImpl<>(metadata.getClassNN(entityClass));
     }
 
+    public KeyValueContainer createKeyValueContainer() {
+        return new KeyValueContainerImpl();
+    }
+
+    public KeyValueCollectionContainer createKeyValueCollectionContainer() {
+        return new KeyValueCollectionContainerImpl();
+    }
+
     public <E extends Entity<K>, K> InstanceLoader<E, K> createInstanceLoader() {
         return new StandardInstanceLoader<>(applicationContext);
     }
 
     public <E extends Entity> CollectionLoader<E> createCollectionLoader() {
         return new StandardCollectionLoader<>(applicationContext);
+    }
+
+    public KeyValueCollectionLoader createKeyValueCollectionLoader() {
+        return new StandardKeyValueCollectionLoader(applicationContext);
     }
 }
